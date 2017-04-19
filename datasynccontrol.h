@@ -36,6 +36,10 @@ public slots:
 	void sync();
 	void resync();
 
+	void exportUserData(const QString &fileName);
+	void importUserData(const QString &fileName);
+	void initExchange();
+
 	void setColorMap(ColorMap colorMap);
 	void resetColorMap();
 
@@ -52,6 +56,7 @@ private slots:
 	void updateProgress(int taskCount);
 
 private:
+	const QString _setupName;
 	QtDataSync::SyncController *_syncController;
 	ColorMap _colorMap;
 	int _currentMax;

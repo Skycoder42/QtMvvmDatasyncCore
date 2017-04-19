@@ -1,4 +1,5 @@
 #include "datasynccontrol.h"
+#include <coremessage.h>
 #include <setup.h>
 using namespace QtDataSync;
 
@@ -11,6 +12,7 @@ DatasyncControl::DatasyncControl(QObject *parent) :
 
 DatasyncControl::DatasyncControl(const QString &setupName, QObject *parent) :
 	Control(parent),
+	_setupName(setupName),
 	_syncController(new SyncController(setupName, this)),
 	_colorMap(),
 	_currentMax(0),
@@ -64,7 +66,7 @@ double DatasyncControl::syncProgress() const
 bool DatasyncControl::syncEnabled() const
 {
 	//DEBUG
-	auto auth = Setup::authenticatorForSetup<WsAuthenticator>((QObject*)this);
+	auto auth = Setup::authenticatorForSetup<WsAuthenticator>((QObject*)this, _setupName);
 	auto enabled = auth->isRemoteEnabled();
 	auth->deleteLater();
 	return enabled;
@@ -78,6 +80,45 @@ void DatasyncControl::sync()
 void DatasyncControl::resync()
 {
 	_syncController->triggerResync();
+}
+
+void DatasyncControl::exportUserData(const QString &fileName)
+{
+	QFile exportFile(fileName);
+	if(exportFile.open(QIODevice::WriteOnly)) {
+		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+		auth->exportUserData(&exportFile);
+		auth->deleteLater();
+		exportFile.close();
+	} else
+		CoreMessage::critical(tr("User data export"), tr("Failed to create file with error: %1").arg(exportFile.errorString()));
+}
+
+void DatasyncControl::importUserData(const QString &fileName)
+{
+	auto importFile = new QFile(fileName, this);
+	if(importFile->open(QIODevice::ReadOnly)) {
+		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+		auth->importUserData(importFile).onResult(this, [auth, importFile](){
+			auth->deleteLater();
+			importFile->close();
+			importFile->deleteLater();
+			CoreMessage::information(tr("User data import"), tr("Import successfully completed!"));
+		}, [auth, importFile](const QException &e){
+			auth->deleteLater();
+			importFile->close();
+			importFile->deleteLater();
+			CoreMessage::critical(tr("User data import"), tr("Import failed with error: %1").arg(QString::fromUtf8(e.what())));
+		});
+	} else {
+		CoreMessage::critical(tr("User data import"), tr("Failed to open file with error: %1").arg(importFile->errorString()));
+		importFile->deleteLater();
+	}
+}
+
+void DatasyncControl::initExchange()
+{
+
 }
 
 void DatasyncControl::setColorMap(DatasyncControl::ColorMap colorMap)
@@ -102,7 +143,7 @@ void DatasyncControl::resetColorMap()
 void DatasyncControl::setSyncEnabled(bool syncEnabled)
 {
 	//DEBUG
-	auto auth = Setup::authenticatorForSetup<WsAuthenticator>(this);
+	auto auth = Setup::authenticatorForSetup<WsAuthenticator>(this, _setupName);
 	auth->setRemoteEnabled(syncEnabled);
 	auth->reconnect();
 	auth->deleteLater();
