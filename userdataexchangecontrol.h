@@ -27,6 +27,8 @@ public:
 	QAbstractListModel *model() const;
 
 public slots:
+	void exportTo(const QModelIndex &index);
+
 	void setPort(quint16 port);
 	void setDeviceName(QString deviceName);
 
@@ -46,6 +48,8 @@ private:
 	QGadgetListModel<UserInfo> *_model;
 
 	QString _deviceName;
+
+	void sendData(const UserInfo &user, const QString &key);
 };
 
 #endif // USERDATAEXCHANGECONTROL_H
