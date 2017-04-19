@@ -11,6 +11,8 @@ class DatasyncControl : public Control
 {
 	Q_OBJECT
 
+	Q_PROPERTY(bool syncEnabled READ syncEnabled WRITE setSyncEnabled NOTIFY syncEnabledChanged)
+
 	Q_PROPERTY(ColorMap colorMap READ colorMap WRITE setColorMap RESET resetColorMap NOTIFY colorMapChanged)
 	Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
 
@@ -28,11 +30,19 @@ public:
 	bool showProgress() const;
 	double syncProgress() const;
 
+	bool syncEnabled() const;
+
 public slots:
+	void sync();
+	void resync();
+
 	void setColorMap(ColorMap colorMap);
 	void resetColorMap();
 
+	void setSyncEnabled(bool syncEnabled);
+
 signals:
+	void syncEnabledChanged(bool syncEnabled);
 	void colorMapChanged(ColorMap colorMap);
 	void statusStringChanged();
 	void showProgressChanged();

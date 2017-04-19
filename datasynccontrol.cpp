@@ -2,6 +2,9 @@
 #include <setup.h>
 using namespace QtDataSync;
 
+//TODO debug
+#include <wsauthenticator.h>
+
 DatasyncControl::DatasyncControl(QObject *parent) :
 	DatasyncControl(Setup::DefaultSetup, parent)
 {}
@@ -58,6 +61,25 @@ double DatasyncControl::syncProgress() const
 	return (double)_currentValue/(double)_currentMax;
 }
 
+bool DatasyncControl::syncEnabled() const
+{
+	//DEBUG
+	auto auth = Setup::authenticatorForSetup<WsAuthenticator>((QObject*)this);
+	auto enabled = auth->isRemoteEnabled();
+	auth->deleteLater();
+	return enabled;
+}
+
+void DatasyncControl::sync()
+{
+	_syncController->triggerSync();
+}
+
+void DatasyncControl::resync()
+{
+	_syncController->triggerResync();
+}
+
 void DatasyncControl::setColorMap(DatasyncControl::ColorMap colorMap)
 {
 	if (_colorMap == colorMap)
@@ -73,8 +95,17 @@ void DatasyncControl::resetColorMap()
 	_colorMap.insert(SyncController::Loading, Qt::darkCyan);
 	_colorMap.insert(SyncController::Disconnected, Qt::darkYellow);
 	_colorMap.insert(SyncController::Syncing, Qt::darkCyan);
-	_colorMap.insert(SyncController::Synced, Qt::green);
-	_colorMap.insert(SyncController::SyncedWithErrors, Qt::red);
+	_colorMap.insert(SyncController::Synced, Qt::darkGreen);
+	_colorMap.insert(SyncController::SyncedWithErrors, Qt::darkRed);
+}
+
+void DatasyncControl::setSyncEnabled(bool syncEnabled)
+{
+	//DEBUG
+	auto auth = Setup::authenticatorForSetup<WsAuthenticator>(this);
+	auth->setRemoteEnabled(syncEnabled);
+	auth->reconnect();
+	auth->deleteLater();
 }
 
 void DatasyncControl::updateProgress(int taskCount)
