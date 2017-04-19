@@ -1,6 +1,8 @@
 #include "userdataexchangecontrol.h"
+#include "userinfodatagram.h"
 #include <setup.h>
 #include <coremessage.h>
+#include <QBuffer>
 using namespace QtDataSync;
 
 UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObject *parent) :
@@ -11,8 +13,9 @@ UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObje
 	_timer(new QTimer(this)),
 	_model(new QGadgetListModel<UserInfo>(this))
 {
-	_socket->bind(4224, QAbstractSocket::DontShareAddress);//TODO verify
-	//TODO receive data
+	connect(_socket, &QUdpSocket::readyRead,
+			this, &UserDataExchangeControl::newData);
+	setPort(4224);
 
 	connect(_timer, &QTimer::timeout,
 			this, &UserDataExchangeControl::timeout);
@@ -76,7 +79,61 @@ void UserDataExchangeControl::setDeviceName(QString deviceName)
 
 void UserDataExchangeControl::timeout()
 {
-	//TODO send info via socket
+	UserInfo info;
+	info.name = _deviceName;
+	UserInfoDatagram uiData;
+	uiData.type = UserInfoDatagram::UserInfo;
+	uiData.data = _serializer->serialize(info);
+
+	QBuffer buffer;
+	buffer.open(QIODevice::WriteOnly);
+	_serializer->serializeTo(&buffer, uiData);//TODO use real after update
+	_socket->writeDatagram(buffer.data(), QHostAddress::Broadcast, _socket->localPort());
+}
+
+void UserDataExchangeControl::newData()
+{
+	while(_socket->hasPendingDatagrams()) {
+		auto datagram = _socket->receiveDatagram();
+		qDebug() << datagram.data();
+		if(!datagram.isValid())
+			continue;
+
+		QBuffer buffer;
+		buffer.setData(datagram.data());
+		buffer.open(QIODevice::ReadOnly);
+		auto message = _serializer->deserializeFrom(&buffer, qMetaTypeId<UserInfoDatagram>()).value<UserInfoDatagram>();//TODO real use after update
+		switch (message.type) {
+		case UserInfoDatagram::UserInfo:
+		{
+			auto userInfo = _serializer->deserialize<UserInfo>(message.data);
+			userInfo.datagram = datagram;
+			auto wasFound = false;
+			for(auto i = 0; i < _model->rowCount(); i++) {
+				auto info = _model->gadget(i);
+				if(info.address() == userInfo.address()) {
+					wasFound = true;
+					if(info.name != userInfo.name) {
+						_model->removeGadget(i);
+						_model->insertGadget(i, userInfo);
+					}
+					break;
+				}
+			}
+			if(!wasFound)
+				_model->addGadget(userInfo);
+			break;
+		}
+		case UserInfoDatagram::UserData:
+		{
+			//TODO
+			break;
+		}
+		default:
+			Q_UNREACHABLE();
+			break;
+		}
+	}
 }
 
 void UserDataExchangeControl::sendData(const UserInfo &user, const QString &key)

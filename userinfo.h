@@ -3,17 +3,20 @@
 
 #include <QHostAddress>
 #include <QObject>
+#include <QNetworkDatagram>
 
 class UserInfo
 {
 	Q_GADGET
 
 	Q_PROPERTY(QString name MEMBER name CONSTANT)
-	Q_PROPERTY(QHostAddress address MEMBER address STORED false CONSTANT)
+	Q_PROPERTY(QString address READ address STORED false CONSTANT)
 
 public:
 	QString name;
-	QHostAddress address;
+	QNetworkDatagram datagram;
+
+	QString address() const;
 };
 
 Q_DECLARE_METATYPE(UserInfo)

@@ -38,6 +38,7 @@ signals:
 
 private slots:
 	void timeout();
+	void newData();
 
 private:
 	QtDataSync::Authenticator *_authenticator;
