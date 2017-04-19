@@ -1,6 +1,7 @@
 #include "datasynccontrol.h"
 #include <coremessage.h>
 #include <setup.h>
+#include "userdataexchangecontrol.h"
 using namespace QtDataSync;
 
 //TODO debug
@@ -118,7 +119,9 @@ void DatasyncControl::importUserData(const QString &fileName)
 
 void DatasyncControl::initExchange()
 {
-
+	auto control = new UserDataExchangeControl(_setupName, this);
+	control->setDeleteOnClose(true);
+	control->show();
 }
 
 void DatasyncControl::setColorMap(DatasyncControl::ColorMap colorMap)
