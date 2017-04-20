@@ -1,8 +1,10 @@
+#include "userdata.h"
 #include "userdataexchangecontrol.h"
 #include "userinfodatagram.h"
 #include <setup.h>
 #include <coremessage.h>
 #include <QBuffer>
+#include <QCryptographicHash>
 using namespace QtDataSync;
 
 UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObject *parent) :
@@ -11,7 +13,8 @@ UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObje
 	_serializer(new QJsonSerializer(this)),
 	_socket(new QUdpSocket(this)),
 	_timer(new QTimer(this)),
-	_model(new QGadgetListModel<UserInfo>(this))
+	_model(new QGadgetListModel<UserInfo>(this)),
+	_deviceName(QSysInfo::machineHostName())
 {
 	connect(_socket, &QUdpSocket::readyRead,
 			this, &UserDataExchangeControl::newData);
@@ -22,6 +25,7 @@ UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObje
 	_timer->setTimerType(Qt::VeryCoarseTimer);
 	_timer->setInterval(2000);
 	_timer->start();
+	timeout();
 }
 
 quint16 UserDataExchangeControl::port() const
@@ -47,7 +51,9 @@ void UserDataExchangeControl::exportTo(const QModelIndex &index)
 						  QMetaType::QString,
 						  [=](QVariant key) {
 		sendData(info, key.toString());
-	});
+	},
+						  QVariant(),
+						  {{"echoMode", 2}});
 }
 
 void UserDataExchangeControl::setPort(quint16 port)
@@ -95,7 +101,6 @@ void UserDataExchangeControl::newData()
 {
 	while(_socket->hasPendingDatagrams()) {
 		auto datagram = _socket->receiveDatagram();
-		qDebug() << datagram.data();
 		if(!datagram.isValid())
 			continue;
 
@@ -105,30 +110,11 @@ void UserDataExchangeControl::newData()
 		auto message = _serializer->deserializeFrom(&buffer, qMetaTypeId<UserInfoDatagram>()).value<UserInfoDatagram>();//TODO real use after update
 		switch (message.type) {
 		case UserInfoDatagram::UserInfo:
-		{
-			auto userInfo = _serializer->deserialize<UserInfo>(message.data);
-			userInfo.datagram = datagram;
-			auto wasFound = false;
-			for(auto i = 0; i < _model->rowCount(); i++) {
-				auto info = _model->gadget(i);
-				if(info.address() == userInfo.address()) {
-					wasFound = true;
-					if(info.name != userInfo.name) {
-						_model->removeGadget(i);
-						_model->insertGadget(i, userInfo);
-					}
-					break;
-				}
-			}
-			if(!wasFound)
-				_model->addGadget(userInfo);
+			receiveUserInfo(message, datagram);
 			break;
-		}
 		case UserInfoDatagram::UserData:
-		{
-			//TODO
+			receiveUserData(message);
 			break;
-		}
 		default:
 			Q_UNREACHABLE();
 			break;
@@ -138,5 +124,88 @@ void UserDataExchangeControl::newData()
 
 void UserDataExchangeControl::sendData(const UserInfo &user, const QString &key)
 {
-	//TODO export via socket
+	UserData data;
+	data.data = _authenticator->exportUserData();
+	if(!key.isEmpty()) {
+		data.secured = true;
+		auto mask = QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha3_512);
+		while(mask.size() < data.data.size())
+			mask = mask + mask;
+		for(auto i = 0; i < data.data.size(); i++)
+			data.data[i] = data.data[i] ^ mask[i];
+	}
+	data.data = data.data.toBase64();
+
+	UserInfoDatagram uiData;
+	uiData.type = UserInfoDatagram::UserData;
+	uiData.data = _serializer->serialize(data);
+
+	QBuffer buffer;
+	buffer.open(QIODevice::WriteOnly);
+	_serializer->serializeTo(&buffer, uiData);//TODO use real after update
+
+	auto datagram = user.datagram.makeReply(buffer.data());
+	//TODO WHY? test with non local: _socket->writeDatagram(datagram);
+	_socket->writeDatagram(datagram.data(), datagram.destinationAddress(), datagram.destinationPort());
+}
+
+void UserDataExchangeControl::receiveUserInfo(const UserInfoDatagram &message, const QNetworkDatagram &datagram)
+{
+	auto userInfo = _serializer->deserialize<UserInfo>(message.data);
+	if(userInfo.name.isEmpty())
+		userInfo.name = tr("<Unnamed>");
+	userInfo.datagram = datagram;
+	auto wasFound = false;
+	for(auto i = 0; i < _model->rowCount(); i++) {
+		auto info = _model->gadget(i);
+		if(info.address() == userInfo.address()) {
+			wasFound = true;
+			if(info.name != userInfo.name) {
+				_model->removeGadget(i);
+				_model->insertGadget(i, userInfo);
+			}
+			break;
+		}
+	}
+	if(!wasFound)
+		_model->addGadget(userInfo);
+}
+
+void UserDataExchangeControl::receiveUserData(const UserInfoDatagram &message)
+{
+	UserData userData = _serializer->deserialize<UserData>(message.data);
+	userData.data = QByteArray::fromBase64(userData.data);
+
+	auto importDoneHandler = [](){
+		CoreMessage::information(tr("User data import"), tr("Import successfully completed!"));
+	};
+	auto importErrorHandler = [](const QException &e) {
+		CoreMessage::critical(tr("User data import"), tr("Import failed with error: %1").arg(QString::fromUtf8(e.what())));
+	};
+
+	if(userData.secured) {
+		CoreMessage::getInput(tr("Receive user data"),
+							  tr("You received user data! If you want to import it, "
+								 "enter the key to decrypt the received data:"),
+							  QMetaType::QString,
+							  [=](QVariant key) {
+			auto mask = QCryptographicHash::hash(key.toString().toUtf8(), QCryptographicHash::Sha3_512);
+			while(mask.size() < userData.data.size())
+				mask = mask + mask;
+			auto data = userData.data;
+			for(auto i = 0; i < data.size(); i++)
+				data[i] = data[i] ^ mask[i];
+			_authenticator->importUserData(data).onResult(this, importDoneHandler, importErrorHandler);
+		},
+							  QVariant(),
+							  {{"echoMode", 2}},
+							  tr("Import"));
+	} else {
+		CoreMessage::question(tr("Receive user data"),
+							  tr("Do you want to import the received user data?"),
+							  [=](bool ok){
+			if(ok)
+				_authenticator->importUserData(userData.data).onResult(this, importDoneHandler, importErrorHandler);
+		});
+	}
 }

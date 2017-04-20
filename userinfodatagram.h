@@ -8,8 +8,8 @@ class UserInfoDatagram
 {
 	Q_GADGET
 
-	Q_PROPERTY(DatagramType type MEMBER type CONSTANT)
-	Q_PROPERTY(QJsonObject data MEMBER data CONSTANT)
+	Q_PROPERTY(DatagramType type MEMBER type)
+	Q_PROPERTY(QJsonObject data MEMBER data)
 
 public:
 	enum DatagramType {

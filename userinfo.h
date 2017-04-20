@@ -9,12 +9,14 @@ class UserInfo
 {
 	Q_GADGET
 
-	Q_PROPERTY(QString name MEMBER name CONSTANT)
+	Q_PROPERTY(QString name MEMBER name)
 	Q_PROPERTY(QString address READ address STORED false CONSTANT)
 
 public:
 	QString name;
 	QNetworkDatagram datagram;
+
+	UserInfo();
 
 	QString address() const;
 };

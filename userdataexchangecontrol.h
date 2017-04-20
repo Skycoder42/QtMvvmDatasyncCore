@@ -9,6 +9,7 @@
 #include <qgadgetlistmodel.h>
 
 #include "userinfo.h"
+#include "userinfodatagram.h"
 
 class UserDataExchangeControl : public Control
 {
@@ -51,6 +52,8 @@ private:
 	QString _deviceName;
 
 	void sendData(const UserInfo &user, const QString &key);
+	void receiveUserInfo(const UserInfoDatagram &message, const QNetworkDatagram &datagram);
+	void receiveUserData(const UserInfoDatagram &message);
 };
 
 #endif // USERDATAEXCHANGECONTROL_H
