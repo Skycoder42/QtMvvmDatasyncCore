@@ -145,8 +145,10 @@ void UserDataExchangeControl::sendData(const UserInfo &user, const QString &key)
 	_serializer->serializeTo(&buffer, uiData);//TODO use real after update
 
 	auto datagram = user.datagram.makeReply(buffer.data());
-	//TODO WHY? test with non local: _socket->writeDatagram(datagram);
-	_socket->writeDatagram(datagram.data(), datagram.destinationAddress(), datagram.destinationPort());
+	//reset interface & sender (because of broadcast
+	datagram.setInterfaceIndex(0);
+	datagram.setSender(QHostAddress());
+	_socket->writeDatagram(datagram);
 }
 
 void UserDataExchangeControl::receiveUserInfo(const UserInfoDatagram &message, const QNetworkDatagram &datagram)
