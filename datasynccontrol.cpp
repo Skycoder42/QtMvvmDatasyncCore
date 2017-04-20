@@ -83,9 +83,9 @@ void DatasyncControl::resync()
 	_syncController->triggerResync();
 }
 
-void DatasyncControl::exportUserData(const QString &fileName)
+void DatasyncControl::exportUserData(const QUrl &fileName)
 {
-	QFile exportFile(fileName);
+	QFile exportFile(fileName.toLocalFile());
 	if(exportFile.open(QIODevice::WriteOnly)) {
 		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
 		auth->exportUserData(&exportFile);
@@ -95,9 +95,9 @@ void DatasyncControl::exportUserData(const QString &fileName)
 		CoreMessage::critical(tr("User data export"), tr("Failed to create file with error: %1").arg(exportFile.errorString()));
 }
 
-void DatasyncControl::importUserData(const QString &fileName)
+void DatasyncControl::importUserData(const QUrl &fileName)
 {
-	auto importFile = new QFile(fileName, this);
+	auto importFile = new QFile(fileName.toLocalFile(), this);
 	if(importFile->open(QIODevice::ReadOnly)) {
 		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
 		auth->importUserData(importFile).onResult(this, [auth, importFile](){

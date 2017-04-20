@@ -36,8 +36,8 @@ public slots:
 	void sync();
 	void resync();
 
-	void exportUserData(const QString &fileName);
-	void importUserData(const QString &fileName);
+	void exportUserData(const QUrl &fileName);
+	void importUserData(const QUrl &fileName);
 	void initExchange();
 
 	void setColorMap(ColorMap colorMap);
