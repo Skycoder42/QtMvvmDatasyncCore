@@ -6,6 +6,7 @@
 #include <QColor>
 #include <control.h>
 #include <synccontroller.h>
+#include <QIODevice>
 
 class DatasyncControl : public Control
 {
@@ -36,8 +37,8 @@ public slots:
 	void sync();
 	void resync();
 
-	void exportUserData(const QUrl &fileName);
-	void importUserData(const QUrl &fileName);
+	void exportUserData(QIODevice *device);
+	void importUserData(QIODevice *device);
 	void initExchange();
 
 	void setColorMap(ColorMap colorMap);

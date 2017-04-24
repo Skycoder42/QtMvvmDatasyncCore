@@ -83,38 +83,29 @@ void DatasyncControl::resync()
 	_syncController->triggerResync();
 }
 
-void DatasyncControl::exportUserData(const QUrl &fileName)
+void DatasyncControl::exportUserData(QIODevice *device)
 {
-	QFile exportFile(fileName.toLocalFile());
-	if(exportFile.open(QIODevice::WriteOnly)) {
-		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
-		auth->exportUserData(&exportFile);
-		auth->deleteLater();
-		exportFile.close();
-	} else
-		CoreMessage::critical(tr("User data export"), tr("Failed to create file with error: %1").arg(exportFile.errorString()));
+	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+	auth->exportUserData(device);
+	auth->deleteLater();
+	device->close();
+	device->deleteLater();
 }
 
-void DatasyncControl::importUserData(const QUrl &fileName)
+void DatasyncControl::importUserData(QIODevice *device)
 {
-	auto importFile = new QFile(fileName.toLocalFile(), this);
-	if(importFile->open(QIODevice::ReadOnly)) {
-		auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
-		auth->importUserData(importFile).onResult(this, [auth, importFile](){
-			auth->deleteLater();
-			importFile->close();
-			importFile->deleteLater();
-			CoreMessage::information(tr("User data import"), tr("Import successfully completed!"));
-		}, [auth, importFile](const QException &e){
-			auth->deleteLater();
-			importFile->close();
-			importFile->deleteLater();
-			CoreMessage::critical(tr("User data import"), tr("Import failed with error: %1").arg(QString::fromUtf8(e.what())));
-		});
-	} else {
-		CoreMessage::critical(tr("User data import"), tr("Failed to open file with error: %1").arg(importFile->errorString()));
-		importFile->deleteLater();
-	}
+	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+	auth->importUserData(device).onResult(this, [auth, device](){
+		auth->deleteLater();
+		device->close();
+		device->deleteLater();
+		CoreMessage::information(tr("User data import"), tr("Import successfully completed!"));
+	}, [auth, device](const QException &e){
+		auth->deleteLater();
+		device->close();
+		device->deleteLater();
+		CoreMessage::critical(tr("User data import"), tr("Import failed with error: %1").arg(QString::fromUtf8(e.what())));
+	});
 }
 
 void DatasyncControl::initExchange()
