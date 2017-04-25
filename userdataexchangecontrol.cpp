@@ -218,6 +218,8 @@ void UserDataExchangeControl::receiveUserData(const UserInfoDatagram &message)
 								 "enter the key to decrypt the received data:"),
 							  QMetaType::QString,
 							  [=](QVariant key) {
+			if(!key.isValid())
+				return;
 			auto mask = QCryptographicHash::hash(key.toString().toUtf8(), QCryptographicHash::Sha3_512);
 			while(mask.size() < userData.data.size())
 				mask = mask + mask;
