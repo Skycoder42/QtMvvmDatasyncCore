@@ -5,6 +5,8 @@
 #include <coremessage.h>
 #include <QBuffer>
 #include <QCryptographicHash>
+#include <QNetworkInterface>
+#include <QSettings>
 using namespace QtDataSync;
 
 UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObject *parent) :
@@ -14,11 +16,16 @@ UserDataExchangeControl::UserDataExchangeControl(const QString &setupName, QObje
 	_socket(new QUdpSocket(this)),
 	_timer(new QTimer(this)),
 	_model(new QGadgetListModel<UserInfo>(this)),
-	_deviceName(QSysInfo::machineHostName())
+	_deviceName()
 {
 	connect(_socket, &QUdpSocket::readyRead,
 			this, &UserDataExchangeControl::newData);
-	setPort(4224);
+
+	QSettings settings;
+	settings.beginGroup(QStringLiteral("QtMvvm/DataSync"));
+	_deviceName = settings.value(QStringLiteral("name"), QSysInfo::machineHostName()).toString();
+	setPort((quint16)settings.value(QStringLiteral("port"), 4224).toUInt());
+	settings.endGroup();
 
 	connect(_timer, &QTimer::timeout,
 			this, &UserDataExchangeControl::timeout);
@@ -64,9 +71,13 @@ void UserDataExchangeControl::setPort(quint16 port)
 
 	_socket->close();
 	_model->resetModel({});
-	if(_socket->bind(port, QAbstractSocket::DontShareAddress))
+	if(_socket->bind(port, QAbstractSocket::DontShareAddress)) {
 		emit portChanged(_socket->localPort());
-	else {
+		QSettings settings;
+		settings.beginGroup(QStringLiteral("QtMvvm/DataSync"));
+		settings.setValue(QStringLiteral("port"), _socket->localPort());
+		settings.endGroup();
+	} else {
 		emit portChanged(0);
 		CoreMessage::warning(tr("Port binding failed"), tr("Failed to bind to selected port with error: %1").arg(_socket->errorString()));
 	}
@@ -82,6 +93,11 @@ void UserDataExchangeControl::setDeviceName(QString deviceName)
 
 	timeout();//send name immediatly
 	_timer->start();//and restart timer for normal delays
+
+	QSettings settings;
+	settings.beginGroup(QStringLiteral("QtMvvm/DataSync"));
+	settings.setValue(QStringLiteral("name"), deviceName);
+	settings.endGroup();
 }
 
 void UserDataExchangeControl::timeout()
@@ -103,6 +119,16 @@ void UserDataExchangeControl::newData()
 	while(_socket->hasPendingDatagrams()) {
 		auto datagram = _socket->receiveDatagram();
 		if(!datagram.isValid())
+			continue;
+
+		auto isSelf = false;
+		foreach(auto addr, QNetworkInterface::allAddresses()) {
+			if(addr.isEqual(datagram.senderAddress())) {
+				isSelf = true;
+				break;
+			}
+		}
+		if(isSelf)
 			continue;
 
 		QBuffer buffer;
