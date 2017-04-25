@@ -43,14 +43,15 @@ QAbstractListModel *UserDataExchangeControl::model() const
 	return _model;
 }
 
-void UserDataExchangeControl::exportTo(const QModelIndex &index)
+void UserDataExchangeControl::exportTo(int index)
 {
 	auto info = _model->gadget(index);
 	CoreMessage::getInput(tr("Send user data"),
 						  tr("Enter a key to protect your data with before sending (optional):"),
 						  QMetaType::QString,
 						  [=](QVariant key) {
-		sendData(info, key.toString());
+		if(key.isValid())
+			sendData(info, key.toString());
 	},
 						  QVariant(),
 						  {{"echoMode", 2}});

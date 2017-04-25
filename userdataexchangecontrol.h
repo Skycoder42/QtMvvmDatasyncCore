@@ -28,7 +28,7 @@ public:
 	QAbstractListModel *model() const;
 
 public slots:
-	void exportTo(const QModelIndex &index);
+	void exportTo(int index);
 
 	void setPort(quint16 port);
 	void setDeviceName(QString deviceName);
