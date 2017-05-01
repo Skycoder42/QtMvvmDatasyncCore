@@ -4,9 +4,6 @@
 #include "userdataexchangecontrol.h"
 using namespace QtDataSync;
 
-//TODO debug
-#include <wsauthenticator.h>
-
 DatasyncControl::DatasyncControl(QObject *parent) :
 	DatasyncControl(Setup::DefaultSetup, parent)
 {}
@@ -66,11 +63,7 @@ double DatasyncControl::syncProgress() const
 
 bool DatasyncControl::syncEnabled() const
 {
-	//DEBUG
-	auto auth = Setup::authenticatorForSetup<WsAuthenticator>((QObject*)this, _setupName);
-	auto enabled = auth->isRemoteEnabled();
-	auth->deleteLater();
-	return enabled;
+	return _syncController->isSyncEnabled();
 }
 
 void DatasyncControl::sync()
@@ -136,11 +129,7 @@ void DatasyncControl::resetColorMap()
 
 void DatasyncControl::setSyncEnabled(bool syncEnabled)
 {
-	//DEBUG
-	auto auth = Setup::authenticatorForSetup<WsAuthenticator>(this, _setupName);
-	auth->setRemoteEnabled(syncEnabled);
-	auth->reconnect();
-	auth->deleteLater();
+	_syncController->setSyncEnabled(syncEnabled);
 }
 
 void DatasyncControl::updateProgress(int taskCount)
