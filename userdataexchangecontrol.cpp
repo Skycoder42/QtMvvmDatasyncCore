@@ -118,15 +118,15 @@ void UserDataExchangeControl::newData()
 		if(!datagram.isValid())
 			continue;
 
-//		auto isSelf = false;
-//		foreach(auto addr, QNetworkInterface::allAddresses()) {
-//			if(addr.isEqual(datagram.senderAddress())) {
-//				isSelf = true;
-//				break;
-//			}
-//		}
-//		if(isSelf)
-//			continue;
+		auto isSelf = false;
+		foreach(auto addr, QNetworkInterface::allAddresses()) {
+			if(addr.isEqual(datagram.senderAddress())) {
+				isSelf = true;
+				break;
+			}
+		}
+		if(isSelf)
+			continue;
 
 		auto message = _serializer->deserializeFrom<UserInfoDatagram>(datagram.data());
 		switch (message.type) {
