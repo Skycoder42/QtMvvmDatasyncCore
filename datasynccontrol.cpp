@@ -23,6 +23,13 @@ DatasyncControl::DatasyncControl(const QString &setupName, QObject *parent) :
 			this, &DatasyncControl::showProgressChanged);
 	connect(_syncController, &SyncController::syncOperationsChanged,
 			this, &DatasyncControl::updateProgress);
+	connect(_syncController, &SyncController::authenticationErrorChanged,
+			this, &DatasyncControl::authErrorChanged);
+}
+
+bool DatasyncControl::syncEnabled() const
+{
+	return _syncController->isSyncEnabled();
 }
 
 DatasyncControl::ColorMap DatasyncControl::colorMap() const
@@ -63,9 +70,13 @@ double DatasyncControl::syncProgress() const
 	return (double)_currentValue/(double)_currentMax;
 }
 
-bool DatasyncControl::syncEnabled() const
+QString DatasyncControl::authError() const
 {
-	return _syncController->isSyncEnabled();
+	auto error = _syncController->authenticationError();
+	if(error.isNull())
+		return QString();
+	else
+		return tr("Error: %1").arg(error);
 }
 
 void DatasyncControl::sync()
@@ -110,6 +121,11 @@ void DatasyncControl::initExchange()
 	control->show();
 }
 
+void DatasyncControl::setSyncEnabled(bool syncEnabled)
+{
+	_syncController->setSyncEnabled(syncEnabled);
+}
+
 void DatasyncControl::setColorMap(DatasyncControl::ColorMap colorMap)
 {
 	if (_colorMap == colorMap)
@@ -127,11 +143,6 @@ void DatasyncControl::resetColorMap()
 	_colorMap.insert(SyncController::Syncing, Qt::darkCyan);
 	_colorMap.insert(SyncController::Synced, Qt::darkGreen);
 	_colorMap.insert(SyncController::SyncedWithErrors, Qt::darkRed);
-}
-
-void DatasyncControl::setSyncEnabled(bool syncEnabled)
-{
-	_syncController->setSyncEnabled(syncEnabled);
 }
 
 void DatasyncControl::updateProgress(int taskCount)

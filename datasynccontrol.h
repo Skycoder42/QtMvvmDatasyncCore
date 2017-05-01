@@ -20,18 +20,20 @@ class DatasyncControl : public Control
 	Q_PROPERTY(bool showProgress READ showProgress NOTIFY showProgressChanged)
 	Q_PROPERTY(double syncProgress READ syncProgress NOTIFY syncProgressChanged)
 
+	Q_PROPERTY(QString authError READ authError NOTIFY authErrorChanged)
+
 public:
 	typedef QMap<QtDataSync::SyncController::SyncState, QColor> ColorMap;
 
 	explicit DatasyncControl(QObject *parent = nullptr);
 	explicit DatasyncControl(const QString &setupName, QObject *parent = nullptr);
 
+	bool syncEnabled() const;
 	ColorMap colorMap() const;
 	QString statusString() const;
 	bool showProgress() const;
 	double syncProgress() const;
-
-	bool syncEnabled() const;
+	QString authError() const;
 
 public slots:
 	void sync();
@@ -41,10 +43,9 @@ public slots:
 	void importUserData(QIODevice *device);
 	void initExchange();
 
+	void setSyncEnabled(bool syncEnabled);
 	void setColorMap(ColorMap colorMap);
 	void resetColorMap();
-
-	void setSyncEnabled(bool syncEnabled);
 
 signals:
 	void syncEnabledChanged(bool syncEnabled);
@@ -52,6 +53,7 @@ signals:
 	void statusStringChanged();
 	void showProgressChanged();
 	void syncProgressChanged();
+	void authErrorChanged();
 
 private slots:
 	void updateProgress(int taskCount);
