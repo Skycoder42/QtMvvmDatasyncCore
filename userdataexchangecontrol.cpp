@@ -108,10 +108,7 @@ void UserDataExchangeControl::timeout()
 	uiData.type = UserInfoDatagram::UserInfo;
 	uiData.data = _serializer->serialize(info);
 
-	QBuffer buffer;
-	buffer.open(QIODevice::WriteOnly);
-	_serializer->serializeTo(&buffer, uiData);//TODO use real after update
-	_socket->writeDatagram(buffer.data(), QHostAddress::Broadcast, _socket->localPort());
+	_socket->writeDatagram(_serializer->serializeTo(uiData), QHostAddress::Broadcast, _socket->localPort());
 }
 
 void UserDataExchangeControl::newData()
@@ -131,10 +128,7 @@ void UserDataExchangeControl::newData()
 //		if(isSelf)
 //			continue;
 
-		QBuffer buffer;
-		buffer.setData(datagram.data());
-		buffer.open(QIODevice::ReadOnly);
-		auto message = _serializer->deserializeFrom(&buffer, qMetaTypeId<UserInfoDatagram>()).value<UserInfoDatagram>();//TODO real use after update
+		auto message = _serializer->deserializeFrom<UserInfoDatagram>(datagram.data());
 		switch (message.type) {
 		case UserInfoDatagram::UserInfo:
 			receiveUserInfo(message, datagram);
@@ -167,11 +161,7 @@ void UserDataExchangeControl::sendData(const UserInfo &user, const QString &key)
 	uiData.type = UserInfoDatagram::UserData;
 	uiData.data = _serializer->serialize(data);
 
-	QBuffer buffer;
-	buffer.open(QIODevice::WriteOnly);
-	_serializer->serializeTo(&buffer, uiData);//TODO use real after update
-
-	auto datagram = user.datagram.makeReply(buffer.data());
+	auto datagram = user.datagram.makeReply(_serializer->serializeTo(uiData));
 	//reset interface & sender (because of broadcast
 	datagram.setInterfaceIndex(0);
 	datagram.setSender(QHostAddress());
