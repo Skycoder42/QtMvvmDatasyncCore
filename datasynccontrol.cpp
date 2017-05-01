@@ -21,6 +21,8 @@ DatasyncControl::DatasyncControl(const QString &setupName, QObject *parent) :
 			this, &DatasyncControl::statusStringChanged);
 	connect(_syncController, &SyncController::syncStateChanged,
 			this, &DatasyncControl::showProgressChanged);
+	connect(_syncController, &SyncController::syncOperationsChanged,
+			this, &DatasyncControl::updateProgress);
 }
 
 DatasyncControl::ColorMap DatasyncControl::colorMap() const
