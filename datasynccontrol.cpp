@@ -1,6 +1,7 @@
 #include "datasynccontrol.h"
 #include <coremessage.h>
 #include <setup.h>
+#include <wsauthenticator.h>
 #include "userdataexchangecontrol.h"
 using namespace QtDataSync;
 
@@ -79,6 +80,16 @@ QString DatasyncControl::authError() const
 		return tr("Error: %1").arg(error);
 }
 
+bool DatasyncControl::canReset()
+{
+	auto canReset = false;
+	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+	if(dynamic_cast<WsAuthenticator*>(auth))
+		canReset = true;
+	auth->deleteLater();
+	return canReset;
+}
+
 void DatasyncControl::sync()
 {
 	_syncController->triggerSync();
@@ -119,6 +130,55 @@ void DatasyncControl::initExchange()
 	auto control = new UserDataExchangeControl(_setupName, this);
 	control->setDeleteOnClose(true);
 	control->show();
+}
+
+void DatasyncControl::resetIdentity()
+{
+	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+	auto wsauth = dynamic_cast<WsAuthenticator*>(auth);
+	if(wsauth) {
+		CoreApp::MessageConfig message;
+		message.title = tr("Reset Identity");
+		message.text = tr("Do you want to keep your local data, or delete everything?<br/>"
+						  "<b>Warning:</b> Deleting your data cannot be undone. If no other device is connected "
+						  "to this identity, the data is lost permanently!");
+		message.type = CoreApp::Question;
+		message.positiveAction = tr("Delete Data");
+		message.neutralAction = tr("Keep Data");
+		message.negativeAction = tr("Cancel");
+		auto result = CoreMessage::message(message);
+		if(result) {
+			result->setAutoDelete(true);
+			QObject::connect(result, &MessageResult::anyAction,
+							 this, [wsauth, this](MessageResult::ResultType type) {
+				GenericTask<void> task;
+				switch (type) {
+				case MessageResult::PositiveResult:
+					task = wsauth->resetUserIdentity(true);
+					break;
+				case MessageResult::NeutralResult:
+					task = wsauth->resetUserIdentity(false);
+					break;
+				case MessageResult::NegativeResult:
+					wsauth->deleteLater();
+					return;
+				default:
+					Q_UNREACHABLE();
+					break;
+				}
+
+				task.onResult(this, [](){
+					CoreMessage::information(tr("Reset Identity"),
+											 tr("Identity successfully resetted!"));
+				}, [](const QException &e){
+					CoreMessage::warning(tr("Reset Identity"),
+										 tr("Failed to reset Identity with error: %1")
+										 .arg(e.what()));
+				});
+			}, Qt::QueuedConnection);
+		}
+	} else
+		auth->deleteLater();
 }
 
 void DatasyncControl::setSyncEnabled(bool syncEnabled)

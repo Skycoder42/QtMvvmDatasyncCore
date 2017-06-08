@@ -22,6 +22,8 @@ class DatasyncControl : public Control
 
 	Q_PROPERTY(QString authError READ authError NOTIFY authErrorChanged)
 
+	Q_PROPERTY(bool canReset READ canReset CONSTANT)
+
 public:
 	typedef QMap<QtDataSync::SyncController::SyncState, QColor> ColorMap;
 
@@ -35,6 +37,8 @@ public:
 	double syncProgress() const;
 	QString authError() const;
 
+	bool canReset();
+
 public slots:
 	void sync();
 	void resync();
@@ -42,6 +46,7 @@ public slots:
 	void exportUserData(QIODevice *device);
 	void importUserData(QIODevice *device);
 	void initExchange();
+	void resetIdentity();
 
 	void setSyncEnabled(bool syncEnabled);
 	void setColorMap(ColorMap colorMap);
