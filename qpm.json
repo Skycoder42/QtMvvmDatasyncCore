@@ -10,13 +10,14 @@
     "url": "https://github.com/Skycoder42/QtMvvmDatasyncCore.git"
   },
   "version": {
-    "label": "1.1.0",
+    "label": "1.1.1",
     "revision": "",
     "fingerprint": ""
   },
   "dependencies": [
-    "de.skycoder42.qtmvvm.core@1.0.0",
-    "de.skycoder42.qobjectlistmodel@1.1.1"
+    "de.skycoder42.qtmvvm.core@1.0.1",
+    "de.skycoder42.qobjectlistmodel@1.1.1",
+    "de.skycoder42.qpm-translate@1.0.0"
   ],
   "license": "BSD_3_CLAUSE",
   "pri_filename": "de_skycoder42_qtmvvm_datasync_core.pri",
