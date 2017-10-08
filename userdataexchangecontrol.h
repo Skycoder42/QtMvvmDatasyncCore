@@ -2,14 +2,8 @@
 #define USERDATAEXCHANGECONTROL_H
 
 #include <control.h>
-#include <QUdpSocket>
-#include <QJsonSerializer>
-#include <authenticator.h>
-#include <QTimer>
+#include <userdatanetworkexchange.h>
 #include <qgadgetlistmodel.h>
-
-#include "userinfo.h"
-#include "userinfodatagram.h"
 
 class UserDataExchangeControl : public Control
 {
@@ -30,7 +24,7 @@ public:
 public slots:
 	void exportTo(int index);
 
-	void setPort(quint16 port);
+	void setPort(quint16 port, bool force = false);
 	void setDeviceName(QString deviceName);
 
 signals:
@@ -38,22 +32,13 @@ signals:
 	void deviceNameChanged(QString deviceName);
 
 private slots:
-	void timeout();
-	void newData();
+	void usersChanged(QList<QtDataSync::UserInfo> users);
+	void userDataReceived(const QtDataSync::UserInfo &userInfo, bool secured);
 
 private:
-	QtDataSync::Authenticator *_authenticator;
-	QJsonSerializer *_serializer;
-	QUdpSocket *_socket;
-	QTimer *_timer;
+	QtDataSync::UserDataNetworkExchange *_exchanger;
 
-	QGadgetListModel<UserInfo> *_model;
-
-	QString _deviceName;
-
-	void sendData(const UserInfo &user, const QString &key);
-	void receiveUserInfo(const UserInfoDatagram &message, const QNetworkDatagram &datagram);
-	void receiveUserData(const UserInfoDatagram &message);
+	QGadgetListModel<QtDataSync::UserInfo> *_model;
 };
 
 #endif // USERDATAEXCHANGECONTROL_H

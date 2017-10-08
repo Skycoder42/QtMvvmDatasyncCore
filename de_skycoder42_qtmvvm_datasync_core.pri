@@ -2,17 +2,11 @@ QT *= network jsonserializer datasync
 
 HEADERS += \
 	$$PWD/datasynccontrol.h \
-	$$PWD/userdataexchangecontrol.h \
-    $$PWD/userinfo.h \
-    $$PWD/userinfodatagram.h \
-    $$PWD/userdata.h
+	$$PWD/userdataexchangecontrol.h
 
 SOURCES += \
 	$$PWD/datasynccontrol.cpp \
-	$$PWD/userdataexchangecontrol.cpp \
-    $$PWD/userinfo.cpp \
-    $$PWD/userinfodatagram.cpp \
-    $$PWD/userdata.cpp
+	$$PWD/userdataexchangecontrol.cpp
 
 TRANSLATIONS += $$PWD/qtmvvm_datasync_core_de.ts \
 	$$PWD/qtmvvm_datasync_core_template.ts
