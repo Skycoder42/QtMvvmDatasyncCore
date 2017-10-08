@@ -132,10 +132,69 @@ void DatasyncControl::initExchange()
 	control->show();
 }
 
+void DatasyncControl::changeRemote()
+{
+	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
+	auto wsauth = qobject_cast<WsAuthenticator*>(auth);
+	if(wsauth) {
+		CoreApp::MessageConfig message;
+		message.title = tr("Change Remote Server");
+		message.text = tr("Please enter the data of the server to connect to:");
+		message.type = CoreApp::Input;
+		message.neutralAction = tr("Restore Defaults");
+		message.inputType = "qtmvvm_datasync_remotechange";
+
+		QVariantMap data;
+		data[QStringLiteral("url")] = wsauth->remoteUrl().toString();
+		message.defaultValue = data;
+
+		auto result = CoreMessage::message(message);
+		if(result) {
+			result->setAutoDelete(true);
+			QObject::connect(result, &MessageResult::anyAction,
+							 this, [wsauth, result, this](MessageResult::ResultType type) {
+				auto data = result->result().toMap();
+				GenericTask<void> task;
+				switch (type) {
+				case MessageResult::PositiveResult:
+					wsauth->setRemoteUrl(data[QStringLiteral("url")].toString());
+					if(data[QStringLiteral("changeSecret")].toBool())
+						wsauth->setServerSecret(data[QStringLiteral("secret")].toString());
+					task = wsauth->resetUserData(data.value(QStringLiteral("reset"), true).toBool());
+					break;
+				case MessageResult::NeutralResult:
+					wsauth->setRemoteUrl(QUrl());
+					wsauth->setServerSecret(QString());
+					CoreMessage::information(tr("Remote server reset"), tr("The application must be restarted to complete the reset!"), [](){
+						qApp->quit();
+					});
+					break;
+				case MessageResult::NegativeResult:
+					wsauth->deleteLater();
+					return;
+				default:
+					Q_UNREACHABLE();
+					break;
+				}
+
+				task.onResult(this, [](){
+					CoreMessage::information(tr("Reset Identity"),
+											 tr("Identity successfully resetted!"));
+				}, [](const QException &e){
+					CoreMessage::warning(tr("Reset Identity"),
+										 tr("Failed to reset Identity with error: %1")
+										 .arg(e.what()));
+				});
+			}, Qt::QueuedConnection);
+		}
+	} else
+		auth->deleteLater();
+}
+
 void DatasyncControl::resetIdentity()
 {
 	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
-	auto wsauth = dynamic_cast<WsAuthenticator*>(auth);
+	auto wsauth = qobject_cast<WsAuthenticator*>(auth);
 	if(wsauth) {
 		CoreApp::MessageConfig message;
 		message.title = tr("Reset Identity");
@@ -154,10 +213,10 @@ void DatasyncControl::resetIdentity()
 				GenericTask<void> task;
 				switch (type) {
 				case MessageResult::PositiveResult:
-					task = wsauth->resetUserIdentity(true);
+					task = wsauth->resetUserData(true);
 					break;
 				case MessageResult::NeutralResult:
-					task = wsauth->resetUserIdentity(false);
+					task = wsauth->resetUserData(false);
 					break;
 				case MessageResult::NegativeResult:
 					wsauth->deleteLater();

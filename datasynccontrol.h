@@ -46,6 +46,7 @@ public slots:
 	void exportUserData(QIODevice *device);
 	void importUserData(QIODevice *device);
 	void initExchange();
+	void changeRemote();
 	void resetIdentity();
 
 	void setSyncEnabled(bool syncEnabled);
