@@ -14,7 +14,7 @@ SOURCES += \
     $$PWD/userinfodatagram.cpp \
     $$PWD/userdata.cpp
 
-QPM_TRANSLATIONS += $$PWD/qtmvvm_datasync_core_de.ts \
+TRANSLATIONS += $$PWD/qtmvvm_datasync_core_de.ts \
 	$$PWD/qtmvvm_datasync_core_template.ts
 
 INCLUDEPATH += $$PWD
