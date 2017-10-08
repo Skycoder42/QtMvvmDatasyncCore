@@ -158,7 +158,7 @@ void DatasyncControl::changeRemote()
 				switch (type) {
 				case MessageResult::PositiveResult:
 					wsauth->setRemoteUrl(data[QStringLiteral("url")].toString());
-					if(data[QStringLiteral("changeSecret")].toBool())
+					if(data.contains(QStringLiteral("secret")))
 						wsauth->setServerSecret(data[QStringLiteral("secret")].toString());
 					task = wsauth->resetUserData(data.value(QStringLiteral("reset"), true).toBool());
 					break;
