@@ -1,7 +1,8 @@
 #include "datasynccontrol.h"
+#include <QtDataSync/Setup>
+#include <QtDataSync/WsAuthenticator>
 #include <coremessage.h>
-#include <setup.h>
-#include <wsauthenticator.h>
+#include "changeremotecontrol.h"
 #include "userdataexchangecontrol.h"
 using namespace QtDataSync;
 
@@ -84,7 +85,7 @@ bool DatasyncControl::canReset()
 {
 	auto canReset = false;
 	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
-	if(dynamic_cast<WsAuthenticator*>(auth))
+	if(qobject_cast<WsAuthenticator*>(auth))
 		canReset = true;
 	auth->deleteLater();
 	return canReset;
@@ -134,61 +135,12 @@ void DatasyncControl::initExchange()
 
 void DatasyncControl::changeRemote()
 {
-	auto auth = Setup::authenticatorForSetup<Authenticator>(this, _setupName);
-	auto wsauth = qobject_cast<WsAuthenticator*>(auth);
-	if(wsauth) {
-		CoreApp::MessageConfig message;
-		message.title = tr("Change Remote Server");
-		message.text = tr("Please enter the data of the server to connect to:");
-		message.type = CoreApp::Input;
-		message.neutralAction = tr("Restore Defaults");
-		message.inputType = "qtmvvm_datasync_remotechange";
-
-		QVariantMap data;
-		data[QStringLiteral("url")] = wsauth->remoteUrl().toString();
-		message.defaultValue = data;
-
-		auto result = CoreMessage::message(message);
-		if(result) {
-			result->setAutoDelete(true);
-			QObject::connect(result, &MessageResult::anyAction,
-							 this, [wsauth, result, this](MessageResult::ResultType type) {
-				auto data = result->result().toMap();
-				GenericTask<void> task;
-				switch (type) {
-				case MessageResult::PositiveResult:
-					wsauth->setRemoteUrl(data[QStringLiteral("url")].toString());
-					if(data.contains(QStringLiteral("secret")))
-						wsauth->setServerSecret(data[QStringLiteral("secret")].toString());
-					task = wsauth->resetUserData(data.value(QStringLiteral("reset"), true).toBool());
-					break;
-				case MessageResult::NeutralResult:
-					wsauth->setRemoteUrl(QUrl());
-					wsauth->setServerSecret(QString());
-					CoreMessage::information(tr("Remote server reset"), tr("The application must be restarted to complete the reset!"), [](){
-						qApp->quit();
-					});
-					break;
-				case MessageResult::NegativeResult:
-					wsauth->deleteLater();
-					return;
-				default:
-					Q_UNREACHABLE();
-					break;
-				}
-
-				task.onResult(this, [](){
-					CoreMessage::information(tr("Reset Identity"),
-											 tr("Identity successfully resetted!"));
-				}, [](const QException &e){
-					CoreMessage::warning(tr("Reset Identity"),
-										 tr("Failed to reset Identity with error: %1")
-										 .arg(e.what()));
-				});
-			}, Qt::QueuedConnection);
-		}
+	auto control = new ChangeRemoteControl(_setupName, this);
+	if(control->isValid()) {
+		control->setDeleteOnClose(true);
+		control->show();
 	} else
-		auth->deleteLater();
+		control->deleteLater();
 }
 
 void DatasyncControl::resetIdentity()

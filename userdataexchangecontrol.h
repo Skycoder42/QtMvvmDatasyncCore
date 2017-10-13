@@ -2,7 +2,7 @@
 #define USERDATAEXCHANGECONTROL_H
 
 #include <control.h>
-#include <userdatanetworkexchange.h>
+#include <QtDataSync/UserDataNetworkExchange>
 #include <qgadgetlistmodel.h>
 
 class UserDataExchangeControl : public Control

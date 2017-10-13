@@ -1,5 +1,5 @@
 #include "userdataexchangecontrol.h"
-#include <setup.h>
+#include <QtDataSync/Setup>
 #include <coremessage.h>
 #include <QSettings>
 using namespace QtDataSync;

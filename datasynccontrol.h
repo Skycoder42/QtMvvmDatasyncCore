@@ -4,9 +4,9 @@
 #include <QObject>
 #include <QMap>
 #include <QColor>
-#include <control.h>
-#include <synccontroller.h>
+#include <QtDataSync/SyncController>
 #include <QIODevice>
+#include <control.h>
 
 class DatasyncControl : public Control
 {
