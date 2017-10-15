@@ -51,7 +51,7 @@ void ChangeRemoteControl::accept()
 	}, [](const QException &e){
 		CoreMessage::warning(tr("Reset Identity"),
 							 tr("Failed to reset Identity with error: %1")
-							 .arg(e.what()));
+							 .arg(QString::fromUtf8(e.what())));
 	});
 }
 
@@ -66,7 +66,7 @@ void ChangeRemoteControl::reset()
 	}, [](const QException &e){
 		CoreMessage::warning(tr("Reset Identity"),
 							 tr("Failed to reset Identity with error: %1")
-							 .arg(e.what()));
+							 .arg(QString::fromUtf8(e.what())));
 	});
 }
 
